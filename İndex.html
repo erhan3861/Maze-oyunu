@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Beaver Games : Modern Maze</title>
+<style>
+:root {
+  --bg:#0b0f26;
+  --panel:#141a3f;
+  --panel2:#192159;
+  --ink:#eef0ff;
+  --muted:#a9add6;
+  --accent:#6c5dd3;
+  --gold:#ffde59;
+  --good:#2ecc71;
+}
+* { box-sizing:border-box }
+html, body {
+  height:100%;
+  margin:0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+  background:radial-gradient(1200px 800px at 10% -10%, rgba(108,93,211,.18), transparent 30%), var(--bg);
+  color:var(--ink);
+}
+.wrap {
+  width: 95%;
+  max-width:1200px;
+  margin:24px auto;
+  padding:12px;
+  text-align: center;
+}
+h1 {
+  font-size: clamp(22px, 3vw, 32px);
+  margin-bottom: 16px;
+}
+.card {
+  background:linear-gradient(180deg, var(--panel), var(--panel2));
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:16px;
+  box-shadow:0 12px 32px rgba(0,0,0,.35);
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.btn {
+  background:linear-gradient(180deg, #273074, #1a1f55);
+  border:1px solid rgba(255,255,255,.10);
+  color:#fff;
+  padding:10px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:700;
+  letter-spacing:.2px;
+  box-shadow:0 8px 18px rgba(0,0,0,.25);
+  transition:transform .05s, box-shadow .2s;
+}
+.btn:hover { box-shadow:0 12px 22px rgba(0,0,0,.35) }
+.btn:active { transform:translateY(1px) }
+.btn.acc { background:linear-gradient(180deg,var(--accent),#4e42c2) }
+.btn.good { background:linear-gradient(180deg,#2f9b63,#177845) }
+label, .stat {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+select {
+  background:#0e1333;
+  border:1px solid rgba(255,255,255,.12);
+  color:#fff;
+  border-radius:10px;
+  padding:10px;
+  font-weight: 700;
+}
+#startDiv {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5,6,16,.65);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+}
+#start {
+    background:linear-gradient(180deg, var(--panel), var(--panel2));
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:16px;
+    box-shadow:0 12px 32px rgba(0,0,0,.35);
+    padding: 24px 32px;
+    color: var(--ink);
+    cursor: pointer;
+}
+#start:hover {
+    box-shadow: 0 16px 40px rgba(0,0,0,.45);
+    transform: translateY(-2px);
+    transition: all .2s ease;
+}
+#start > div:first-child {
+    font-size: 24pt;
+    padding-bottom: 1em;
+}
+.keys {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--muted);
+}
+#landscape {
+  border: 2px solid var(--panel);
+  display: block;
+  margin: auto;
+  background-color: var(--panel2);
+  border-radius: 12px;
+}
+.path {
+  fill: #2E5FFF;
+}
+#avatarPath {
+  fill: none;
+  stroke: #F0A609;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#avatar {
+  fill: #F0A609;
+}
+#goal {
+  fill: #D02E2B;
+}
+/* Modal Styles */
+.modal {
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(5,6,16,.65);
+  backdrop-filter:blur(5px);
+  z-index: 1001; /* StartDiv'in üzerinde olsun */
+}
+.modal.active { display:flex }
+.modal .inner {
+  background:linear-gradient(180deg, var(--panel), var(--panel2));
+  border:1px solid rgba(255,255,255,.10);
+  padding:28px;
+  border-radius:16px;
+  max-width:520px;
+  text-align:center;
+  box-shadow:0 16px 40px rgba(0,0,0,.4);
+}
+.modal h2 { margin-top: 0; font-size: 24px; }
+.pass {
+  font-size:24px;
+  font-weight:900;
+  color:var(--gold);
+  letter-spacing:1px;
+  text-shadow:0 0 10px rgba(255,222,89,.9), 0 0 18px rgba(108,93,211,.6);
+  word-break: break-all;
+}
+.copyline {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+  margin:16px 0;
+  background: rgba(0,0,0,0.2);
+  padding: 12px;
+  border-radius: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Modern Labirent Oyunu</h1>
+  
+  <div class="card controls">
+      <label for="difficulty">Zorluk:</label>
+      <select id="difficulty">
+        <option value=0>Kolay</option>
+        <option value=1>Normal</option>
+        <option value=2>Zor</option>
+      </select>
+  </div>
+
+  <div class="card">
+    <svg id="landscape" xmlns="http://www.w3.org/2000/svg">
+      <g id="wallLayer"></g>
+      <g id="goalLayer"></g>
+      <g id="avatarLayer"></g>
+    </svg>
+  </div>
+</div>
+
+<div id="startDiv">
+  <button id="start">
+    <div>Start</div>
+    <div class="keys">Kontrol: &uarr; &larr; &darr; &rarr;</div>
+  </button>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="inner">
+    <h2>🎉 Labirent Çözüldü!</h2>
+    <p>Hedefe başarıyla ulaştınız. İşte bu bölümün şifresi:</p>
+    <div class="copyline">
+      <span class="pass" id="pwd">—</span>
+      <button class="btn" id="copy">📋 Kopyala</button>
+    </div>
+    <button class="btn good" id="ok">Yeni Labirent!</button>
+  </div>
+</div>
+
+<audio id="ding" src="https://neil.fraser.name/common/ding.mp3"></audio>
+
+<script>
+'use strict';
+
+// --- GAME LOGIC ---
+var HEIGHTS = [12, 24, 48];
+var WIDTHS = [24, 48, 96];
+var SQUARE_SIZES = [30, 20, 15];
+var SPEEDS = [0, 0.5, 0.75];
+var SPEED, HEIGHT, WIDTH, SQUARE_SIZE;
+var isRunning = false;
+var isStartVisible = true;
+var walls = [];
+var SVG_NS = 'http://www.w3.org/2000/svg';
+var avatarPath = [];
+var avatar = {x: 0, y: 0};
+var goal = null;
+var originX, originY;
+
+// --- DOM ELEMENTS ---
+const modal = document.getElementById('modal');
+const pwdEl = document.getElementById('pwd');
+const copyBtn = document.getElementById('copy');
+const okBtn = document.getElementById('ok');
+const FIXED_PASSWORD = 'MAZE-RUNNER-PRO-2025-KODU-XYZ';
+
+function init() {
+  var m = document.cookie.match(/difficulty=([012])/);
+  var difficulty = Number(m ? m[1] : 0);
+  document.getElementById('difficulty').selectedIndex = difficulty;
+
+  function setDifficulty() {
+    difficulty = document.getElementById('difficulty').selectedIndex;
+    document.cookie = 'difficulty=' + difficulty + '; samesite=strict; max-age=31536000';
+    HEIGHT = HEIGHTS[difficulty];
+    WIDTH = WIDTHS[difficulty];
+    SQUARE_SIZE = SQUARE_SIZES[difficulty];
+    SPEED = SPEEDS[difficulty];
+    var svg = document.getElementById('landscape');
+    svg.setAttribute('height', SQUARE_SIZE * HEIGHT + 1);
+    svg.setAttribute('width', SQUARE_SIZE * WIDTH + 1);
+  }
+  setDifficulty();
+
+  document.getElementById('start').addEventListener('click', startButton);
+  document.addEventListener('keypress', keyPress);
+  document.addEventListener('keydown', keyDown);
+  document.getElementById('difficulty').addEventListener('change', () => {
+      setDifficulty();
+      initMaze();
+  });
+
+  avatar.x = Math.floor(Math.random() * WIDTH);
+  avatar.y = Math.floor(Math.random() * HEIGHT);
+  initMaze();
+}
+window.addEventListener('load', init);
+
+function startButton() {
+  var startDiv = document.getElementById('startDiv');
+  startDiv.style.display = 'none';
+  isStartVisible = false;
+}
+
+function initMaze() {
+  isRunning = false;
+  var g = document.getElementById('wallLayer');
+  while (g.firstChild) g.removeChild(g.firstChild);
+  g = document.getElementById('goalLayer');
+  while (g.firstChild) g.removeChild(g.firstChild);
+  g = document.getElementById('avatarLayer');
+  while (g.firstChild) g.removeChild(g.firstChild);
+  walls.length = 0;
+  for (var x = 0; x < WIDTH; x++) {
+    walls[x] = [];
+    for (var y = 0; y < HEIGHT; y++) walls[x][y] = true;
+  }
+  originX = avatar.x;
+  originY = avatar.y;
+  initMaze.horizon = [{x: originX, y: originY}];
+  initMazeStep();
+}
+
+function startGame() {
+  goal = findEnd(originX, originY);
+  var g = document.getElementById('goalLayer');
+  var element = document.createElementNS(SVG_NS, 'circle');
+  element.setAttribute('r', SQUARE_SIZE / 4);
+  element.setAttribute('cx', goal.x * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  element.setAttribute('cy', goal.y * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  element.id = 'goal';
+  g.appendChild(element);
+
+  avatar = findEnd(goal.x, goal.y);
+  avatarPath = [{x: avatar.x, y: avatar.y}];
+  g = document.getElementById('avatarLayer');
+  element = document.createElementNS(SVG_NS, 'path');
+  element.style.strokeWidth = (SQUARE_SIZE / 6) + 'px';
+  element.id = 'avatarPath';
+  g.appendChild(element);
+  element = document.createElementNS(SVG_NS, 'circle');
+  element.setAttribute('r', SQUARE_SIZE / 4);
+  element.setAttribute('cx', avatar.x * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  element.setAttribute('cy', avatar.y * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  element.id = 'avatar';
+  g.appendChild(element);
+
+  isRunning = true;
+}
+
+function initMazeStep() {
+  if (!initMaze.horizon.length) {
+    startGame();
+    return;
+  }
+  var randomIndex = Math.floor(Math.random() * initMaze.horizon.length);
+  var cell = initMaze.horizon.splice(randomIndex, 1)[0];
+  var wallCount = isWall(cell.x + 1, cell.y, true) + isWall(cell.x - 1, cell.y, true) + isWall(cell.x, cell.y + 1, true) + isWall(cell.x, cell.y - 1, true);
+  if (wallCount >= 3) {
+    if (isWall(cell.x + 1, cell.y, false)) initMaze.horizon.push({x: cell.x + 1, y: cell.y});
+    if (isWall(cell.x - 1, cell.y, false)) initMaze.horizon.push({x: cell.x - 1, y: cell.y});
+    if (isWall(cell.x, cell.y + 1, false)) initMaze.horizon.push({x: cell.x, y: cell.y + 1});
+    if (isWall(cell.x, cell.y - 1, false)) initMaze.horizon.push({x: cell.x, y: cell.y - 1});
+    walls[cell.x][cell.y] = false;
+    draw(cell.x, cell.y);
+    draw(cell.x + 1, cell.y);
+    draw(cell.x - 1, cell.y);
+    draw(cell.x, cell.y + 1);
+    draw(cell.x, cell.y - 1);
+  }
+  if (Math.random() < SPEED && initMaze.horizon.length) {
+    initMazeStep();
+  } else {
+    setTimeout(initMazeStep, 0);
+  }
+}
+
+function draw(x, y) {
+  if (isWall(x, y, true)) return;
+  var layer = document.getElementById('wallLayer');
+  var oldElement = document.getElementById(x + '_' + y);
+  if (oldElement) layer.removeChild(oldElement);
+  var g = document.createElementNS(SVG_NS, 'g');
+  var element = document.createElementNS(SVG_NS, 'circle');
+  element.setAttribute('r', SQUARE_SIZE / 4);
+  element.setAttribute('cx', SQUARE_SIZE / 2);
+  element.setAttribute('cy', SQUARE_SIZE / 2);
+  element.setAttribute('class', 'path');
+  g.appendChild(element);
+  if (!isWall(x - 1, y, true)) {
+    element = document.createElementNS(SVG_NS, 'rect');
+    element.setAttribute('height', SQUARE_SIZE / 2);
+    element.setAttribute('width', SQUARE_SIZE / 2 + 1); element.setAttribute('x', -1);
+    element.setAttribute('y', SQUARE_SIZE / 4);
+    element.setAttribute('class', 'path');
+    g.appendChild(element);
+  }
+  if (!isWall(x + 1, y, true)) {
+    element = document.createElementNS(SVG_NS, 'rect');
+    element.setAttribute('height', SQUARE_SIZE / 2);
+    element.setAttribute('width', SQUARE_SIZE / 2);
+    element.setAttribute('x', SQUARE_SIZE / 2);
+    element.setAttribute('y', SQUARE_SIZE / 4);
+    element.setAttribute('class', 'path');
+    g.appendChild(element);
+  }
+  if (!isWall(x, y - 1, true)) {
+    element = document.createElementNS(SVG_NS, 'rect');
+    element.setAttribute('height', SQUARE_SIZE / 2 + 1);
+    element.setAttribute('width', SQUARE_SIZE / 2);
+    element.setAttribute('x', SQUARE_SIZE / 4);
+    element.setAttribute('y', -1);
+    element.setAttribute('class', 'path');
+    g.appendChild(element);
+  }
+  if (!isWall(x, y + 1, true)) {
+    element = document.createElementNS(SVG_NS, 'rect');
+    element.setAttribute('height', SQUARE_SIZE / 2);
+    element.setAttribute('width', SQUARE_SIZE / 2);
+    element.setAttribute('x', SQUARE_SIZE / 4);
+    element.setAttribute('y', SQUARE_SIZE / 2);
+    element.setAttribute('class', 'path');
+    g.appendChild(element);
+  }
+  g.setAttribute('transform', 'translate(' + (x * SQUARE_SIZE + 0.5) + ',' + (y * SQUARE_SIZE + 0.5) + ')');
+  g.id = x + '_' + y;
+  layer.appendChild(g);
+}
+
+function findEnd(startX, startY) {
+  var end = null;
+  var endSteps = 0;
+  var visited = new Set();
+  var queue = new Map();
+  queue.set(startX + ' ' + startY, 0);
+  while (queue.size) {
+    var xys_ = queue.entries().next().value;
+    var xy = xys_[0];
+    var steps = Number(xys_[1]) + 1;
+    queue.delete(xy);
+    if (visited.has(xy)) continue;
+    visited.add(xy);
+    var xy_ = xy.split(' ');
+    var x = Number(xy_[0]);
+    var y = Number(xy_[1]);
+    if (isWall(x, y, true)) continue;
+    if (steps > endSteps) {
+      end = {x: x, y: y};
+      endSteps = steps;
+    }
+    queue.set((x + 1) + ' ' + y, steps);
+    queue.set((x - 1) + ' ' + y, steps);
+    queue.set(x + ' ' + (y + 1), steps);
+    queue.set(x + ' ' + (y - 1), steps);
+  }
+  return end;
+}
+
+function isWall(x, y, outside) {
+  if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return outside;
+  return walls[x][y];
+}
+
+function keyPress(e) {
+  if (isStartVisible && (e.key === 'Enter' || e.key === ' ')) {
+    startButton();
+    e.preventDefault();
+  }
+}
+
+function keyDown(e) {
+  if (isStartVisible || !isRunning || e.repeat) return;
+  switch (e.key) {
+    case 'ArrowLeft': move(-1, 0); break;
+    case 'ArrowRight': move(1, 0); break;
+    case 'ArrowUp': move(0, -1); break;
+    case 'ArrowDown': move(0, 1); break;
+    default: return;
+  }
+  e.preventDefault();
+}
+
+function move(dx, dy) {
+  var newX = avatar.x + dx;
+  var newY = avatar.y + dy;
+  if (isWall(newX, newY, true)) return;
+  avatar.x = newX;
+  avatar.y = newY;
+  var element = document.getElementById('avatar');
+  element.setAttribute('cx', avatar.x * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  element.setAttribute('cy', avatar.y * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  var lastSpot = avatarPath[avatarPath.length - 2];
+  if (lastSpot && lastSpot.x === newX && lastSpot.y === newY) {
+    avatarPath.pop();
+  } else {
+    avatarPath.push({x: newX, y: newY});
+  }
+  drawPath();
+
+  if (newX === goal.x && newY === goal.y) {
+    isRunning = false;
+    document.getElementById('ding').play();
+    // Show modal instead of immediate restart
+    pwdEl.textContent = FIXED_PASSWORD;
+    modal.classList.add('active');
+  }
+}
+
+function drawPath() {
+  var d = [];
+  for (var i = 0; i < avatarPath.length; i++) {
+    d.push(i ? 'L' : 'M', avatarPath[i].x * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5, avatarPath[i].y * SQUARE_SIZE + SQUARE_SIZE / 2 + 0.5);
+  }
+  var element = document.getElementById('avatarPath');
+  element.setAttribute('d', d.join(' '));
+}
+
+okBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+    initMaze(); // Start a new maze after closing the modal
+});
+modal.addEventListener('click', e => {
+    if (e.target === modal) {
+        modal.classList.remove('active');
+        initMaze();
+    }
+});
+
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }
+  } catch (e) {
+    console.warn('Clipboard failed:', e);
+    return false;
+  }
+}
+
+async function handleCopy() {
+    const textToCopy = (pwdEl.textContent || '').trim();
+    if (!textToCopy || textToCopy === '—') return;
+    const ok = await copyToClipboard(textToCopy);
+    copyBtn.textContent = ok ? '✅ Kopyalandı' : '❌ Hata';
+    setTimeout(() => copyBtn.textContent = '📋 Kopyala', 1500);
+}
+copyBtn.addEventListener('click', handleCopy);
+
+</script>
+</body>
+</html>
